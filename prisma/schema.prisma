@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int            @id @default(autoincrement())
+  name          String
+  email         String         @unique
+  password      String
+  role          Role           @default(CUSTOMER)
+  address       String?
+  phone         String?
+  orders        Order[]
+  cart          Cart?
+  prescriptions Prescription[]
+  createdAt     DateTime       @default(now())
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+  MEDICAL
+}
+
+model Medicine {
+  id                   Int            @id @default(autoincrement())
+  name                 String
+  brand                String
+  categoryId           Int // 🔹 Foreign key
+  category             Category       @relation(fields: [categoryId], references: [id])
+  description          String
+  price                Float
+  quantityInStock      Int
+  requiresPrescription Boolean        @default(false)
+  expiryDate           DateTime
+  imageUrl             String?
+  createdAt            DateTime       @default(now())
+  orderItems           OrderItem[]
+  cartItems            CartItem[]
+  prescriptions        Prescription[]
+}
+
+model Category {
+  id          Int        @id @default(autoincrement())
+  name        String
+  description String?
+  medicines   Medicine[]
+}
+
+model Order {
+  id              Int         @id @default(autoincrement())
+  user            User        @relation(fields: [userId], references: [id])
+  userId          Int
+  items           OrderItem[]
+  totalAmount     Float
+  status          OrderStatus @default(PENDING)
+  paymentMethod   PaymentType @default(COD)
+  deliveryAddress String
+  orderedAt       DateTime    @default(now())
+}
+
+model OrderItem {
+  id         Int      @id @default(autoincrement())
+  order      Order    @relation(fields: [orderId], references: [id])
+  orderId    Int
+  medicine   Medicine @relation(fields: [medicineId], references: [id])
+  medicineId Int
+  quantity   Int
+  price      Float
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentType {
+  COD
+  ONLINE
+}
+
+model Prescription {
+  id Int @id @default(autoincrement())
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+
+  medicineId Int
+  medicine   Medicine @relation(fields: [medicineId], references: [id])
+
+  imageUrl   String
+  status     PrescriptionStatus @default(PENDING)
+  uploadedAt DateTime           @default(now())
+}
+
+enum PrescriptionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Cart {
+  id        Int        @id @default(autoincrement())
+  user      User       @relation(fields: [userId], references: [id])
+  userId    Int        @unique
+  items     CartItem[]
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id         Int      @id @default(autoincrement())
+  cart       Cart     @relation(fields: [cartId], references: [id])
+  cartId     Int
+  medicine   Medicine @relation(fields: [medicineId], references: [id])
+  medicineId Int
+  quantity   Int
+}
